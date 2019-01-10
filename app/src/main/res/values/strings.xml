@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">CheckeredFlag</string>
+    <string name="race_event_list_date">Date</string>
+    <string name="race_event_title">Race</string>
+    <string-array name="fragment_list_array">
+        <item>Race Calendar</item>
+        <item>Driver Standings</item>
+    </string-array>
+</resources>
