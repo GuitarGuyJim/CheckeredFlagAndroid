@@ -14,18 +14,26 @@ import android.widget.TextView;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Displays the drivers in order of points.  This class uses an abstract function getDrivers() to
+ * get the list of drivers and their points to display.  Child classes must implement the
+ * getDrivers() function and determine what drivers are put in the list of drivers to display.
+ */
 public abstract class DriverStandingsFragment extends Fragment {
 
     /**
-     * @return A ordered list of drivers to display on the fragment
+     * @return A ordered list of drivers to display on the fragment.  Drivers with higher point
+     *         totals should be towards the beginning of the list.
      */
     protected abstract List<Driver> getDrivers();
 
+    /** id of the event or other item related to why we are displaying the drivers */
     protected UUID mObjectId = null;
 
     private static final String ARG_OBJECT_ID =
             "com.redskysoftware.checkeredflag.object_id";
 
+    /** The view that displays the list of drivers */
     private RecyclerView mDriverRecyclerView;
     private DriverStandingsFragment.DriverAdapter mAdapter;
 
@@ -45,6 +53,9 @@ public abstract class DriverStandingsFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true); //TODO....need this here?
 
+        //
+        // Get the bundle arguments and set the mObjectId value.
+        //
         Bundle args = getArguments();
         if (args != null) {
             mObjectId = (UUID)args.getSerializable(ARG_OBJECT_ID);
@@ -67,6 +78,9 @@ public abstract class DriverStandingsFragment extends Fragment {
         return view;
     }
 
+    /**
+     *  Updates the data displayed in the view.
+     */
     private void updateUI() {
 
         List<Driver> drivers = getDrivers();
@@ -82,17 +96,33 @@ public abstract class DriverStandingsFragment extends Fragment {
         //  updateSubtitle();
     }
 
+    /**
+     * The DriverHolder class manages the displaying of data for a single driver in the view.
+     */
     private class DriverHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener {
 
+        /** Displays the driver's position in the list */
         private TextView  mDriverPositionTextView;
+
+        /** Displays the driver's points value */
         private TextView  mPointsTextView;
+
+        /** Displays the driver's full name */
         private TextView  mDriverNameTextView;
+
+        /** Displays the name of the team the driver is driving for */
         private TextView  mTeamNameTextView;
 
         /** The driver info being displayed by the Holder */
         private Driver    mDriver;
 
+        /**
+         * Constructor.  Sets up the text view objects by getting the correct resources.  It does
+         * not populate the text view objects.  That is done in the bind() function.
+         * @param inflater
+         * @param parent
+         */
         public DriverHolder(LayoutInflater inflater, ViewGroup parent) {
             super(inflater.inflate(R.layout.list_item_driver_series, parent, false));
             itemView.setOnClickListener(this);
@@ -103,6 +133,11 @@ public abstract class DriverStandingsFragment extends Fragment {
             mPointsTextView = itemView.findViewById(R.id.driver_points);
         }
 
+        /**
+         * Populates the ViewHolder with data for the specified driver.
+         * @param driver  The driver to display in the ViewHolder
+         * @param position  The driver's position in the list
+         */
         public void bind(Driver driver, int position) {
             mDriver = driver;
 
@@ -115,8 +150,7 @@ public abstract class DriverStandingsFragment extends Fragment {
 
         @Override
         public void onClick(View view) {
-            //Intent intent = CrimePagerActivity.newIntent(getActivity(), mCrime.getId());
-            //startActivity(intent);
+            // We don't currently do anything when you click on a driver.
         }
     }
 

@@ -7,12 +7,20 @@ import java.util.UUID;
  */
 public class Driver implements Comparable<Driver> {
 
+    /** The driver's first name */
     private String mFirstName;
+
+    /** The driver's last name */
     private String mLastName;
 
     /** The name of the team the driver drives for in this series */
     private String mTeamName;
 
+    /**
+     * The low and high performance values indicate a range of performance.  Values should be
+     * between 0 and 100, with the low value being <= to the high value.  low/high ranges that
+     * are small define a more consistent driver.
+     */
     private int    mHighPerformance;
     private int    mLowPerformance;
 
@@ -23,8 +31,19 @@ public class Driver implements Comparable<Driver> {
      */
     private int    mPoints;
 
+    /** Unique id for the driver */
     private UUID   mId;
 
+    /**
+     * Constructor
+     * @param firstName  Driver's first name
+     * @param lastName   Driver's last name
+     * @param teamName   The name of the team the driver is driving for.
+     * @param highPerformance  Low performance value for the driver
+     * @param lowPerformance   High performance value for the driver
+     * @param points     Points value to assign to the driver
+     * @param id   Unique id for the driver
+     */
     public Driver(String firstName, String lastName, String teamName,
                   int highPerformance, int lowPerformance, int points, UUID id) {
         mFirstName = firstName;
@@ -36,6 +55,14 @@ public class Driver implements Comparable<Driver> {
         mId = id;
     }
 
+    /**
+     * Constructor
+     * @param id  Unique id for the driver
+     * @param firstName  Driver's first name
+     * @param lastName  Driver's last name
+     * @param high  High performance value for the driver
+     * @param low   Low performance value for the driver
+     */
     public Driver(UUID id, String firstName, String lastName, int high, int low) {
         mId = id;
         mFirstName = firstName;

@@ -6,4 +6,6 @@
         <item>Race Calendar</item>
         <item>Driver Standings</item>
     </string-array>
+    <string name="finish_position_title">Finish Position</string>
+    <string name="finish_position_instructions">Enter your finishing position for the race."</string>
 </resources>

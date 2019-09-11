@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -19,6 +20,8 @@ import java.util.List;
  * This RaceCalendarFragment displays a race calendar as a list of RaceEvent objects.
  */
 public class RaceCalendarFragment extends Fragment {
+
+    private static final String FINISH_POSITION_DIALOG = "DialogFinishPosition";
 
     private RecyclerView mCalendarRecyclerView;
     private RaceAdapter  mAdapter;
@@ -94,12 +97,31 @@ public class RaceCalendarFragment extends Fragment {
                 Intent intent = RaceResultsActivity.newIntent(getActivity(), mEvent.getEventId());
                 startActivity(intent);
             } else {
+
+                //
+                // The event is not completed, so run it now.  First, we need to ask the user
+                // what position they finished in.  We'll want to bounds check their answer, so
+                // get the list of drivers in the current series.  This will tell us how many
+                // drivers are in the series (and the upper bound).
+                //
+                List<Driver> drivers = DataModel.get(getActivity()).getDriversInSeries("Formula A");
+
+                /*
+                 * Create a FinishPositionDialog, passing in the number of drivers in the series
+                 */
+                FragmentManager manager = getFragmentManager();
+                FinishPositionDialog dialog = FinishPositionDialog.newInstance(drivers.size());
+                dialog.show(manager, FINISH_POSITION_DIALOG);
+
+                /*
+                //TODO move this code to where the finish position dialog sends its data back
                 RaceManager raceManager = new RaceManager(getContext());
                 raceManager.runRace(mEvent);
 
                 // Display the race results
                 Intent intent = RaceResultsActivity.newIntent(getActivity(), mEvent.getEventId());
                 startActivity(intent);
+                 */
             }
         }
     }

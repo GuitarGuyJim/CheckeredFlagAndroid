@@ -23,12 +23,18 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Manages the driver, race, and team data in the application.  This implementation stores data
+ * in a SQLite database (see the database.DatabaseSchema class for the schema definition).  This
+ * class is a singleton.
+ */
 public class DataModel {
 
+    /** The singleton instance of the DataModel */
     private static DataModel sModel;
-    private Context mContext;
+
+    /** The database that contains the application data */
     private SQLiteDatabase mDatabase;
-    private List<RaceEvent> mCalendar;
 
     /**
      * The current series the data model is working with.  This will be set by the DataModel to be
@@ -37,6 +43,11 @@ public class DataModel {
      */
     private UUID mSeries;
 
+    /**
+     * Gets the singleton instance of the DataModel, creating one if one doesn't exist.
+     * @param context  The application context, used to initialize the database connection.
+     * @return  The single instance of the DataModel.
+     */
     public static DataModel get(Context context) {
         if (sModel == null) {
             sModel = new DataModel(context);
@@ -63,7 +74,7 @@ public class DataModel {
                 null,
                 null));
 
-        UUID seasonId = null;
+        UUID seasonId;
 
         try {
             seasonCursor.moveToFirst();
@@ -172,9 +183,34 @@ public class DataModel {
             driverCursor.close();
         }
 
+        //
+        // At this point the drivers list contains the drivers in the series.  Now we need to get
+        // the results for each driver and total up their points for the season.
+        //
+        for (Driver driver : drivers) {
+
+            List<RaceResult> results = getResultsForDriverForSeason(driver.getId());
+
+            driver.setPoints(0);
+
+            for (RaceResult result : results) {
+                driver.setPoints(driver.getPoints() + result.getPoints());
+            }
+        }
+
+        Collections.sort(drivers);
+
         return drivers;
     }
 
+    /**
+     * Adds a race result to the data model.
+     * @param race  Race event the result is for
+     * @param driverId  The ID of the driver this result is for.
+     * @param start     The driver's starting position
+     * @param finish    The driver's finishing position
+     * @param points    The points the driver earned.
+     */
     public void addResult(RaceEvent race, UUID driverId, int start, int finish, int points) {
 
         /* Insert row in the Results Table */
@@ -197,33 +233,12 @@ public class DataModel {
      */
     public List<Driver> getResultsForEvent(UUID eventId) {
 
+
         List<Driver> drivers = new ArrayList<>();
-        ResultCursorWrapper resultsCursor2 = new ResultCursorWrapper(mDatabase.query(
-                ResultsTable.NAME,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null));
 
-        try {
-
-            //
-            // We have a result item for each driver in the race.  Loop over the results, getting
-            // the driver for each result.
-            //
-            resultsCursor2.moveToFirst();
-            while (!resultsCursor2.isAfterLast()) {
-
-                RaceResult result = resultsCursor2.getResult();
-
-                resultsCursor2.moveToNext();
-            }
-        } finally {
-            resultsCursor2.close();
-        }
-
+        //
+        // Query the RaceResult objects for this event
+        //
         ResultCursorWrapper resultsCursor = new ResultCursorWrapper(mDatabase.query(
                 ResultsTable.NAME,
                 null,
@@ -259,6 +274,10 @@ public class DataModel {
                 driverCursor.moveToFirst();
                 if (driverCursor.getCount() == 1) {
 
+                    //
+                    // Get a Driver object for the race results and driver and set the driver's
+                    // points to the points earned in the race.
+                    //
                     Driver driver = driverCursor.getDriver();
                     driver.setPoints(result.getPoints());
                     drivers.add(driver);
@@ -278,30 +297,67 @@ public class DataModel {
     }
 
     /**
+     * Get all of the results for the specified driver in the specified season.
+     * @param driverId  The id of the driver to get the results for
+     * @return List of RaceResults objects, one object for each result the driver had in the season.
+     */
+    public List<RaceResult> getResultsForDriverForSeason(UUID driverId) {
+
+        List<RaceResult> results = new ArrayList<>();
+
+        //
+        // First, we need the list of events in the specified season.
+        //
+        List<RaceEvent> events = getRaceEvents();
+
+        //
+        // For each event, get the result for the driver.
+        //
+        for (RaceEvent event : events) {
+
+            // Get all the results for this event...
+            ResultCursorWrapper resultsCursor = new ResultCursorWrapper(mDatabase.query(
+                    ResultsTable.NAME,
+                    null,
+                    "event=?",
+                    new String[]{event.getEventId().toString()},
+                    null,
+                    null,
+                    null));
+
+            try {
+
+                //
+                // We have a result item for each driver in the race.  Loop over the results,
+                // looking for the result, if any, that belongs to our driver.
+                //
+                resultsCursor.moveToFirst();
+                while (!resultsCursor.isAfterLast()) {
+
+                    RaceResult result = resultsCursor.getResult();
+
+                    if (result.getDriverId().equals(driverId)) {
+                        results.add(result);
+                        break;
+                    }
+                    resultsCursor.moveToNext();
+                }
+            } finally {
+                resultsCursor.close();
+            }
+        }
+
+        return results;
+    }
+
+    /**
      * Constructor.
      * @param context
      */
     private DataModel(Context context) {
-        mContext = context.getApplicationContext();
 
-        mDatabase = new DatabaseHelper(mContext).getWritableDatabase();
-
-        mCalendar = new ArrayList<>();
-
-        Date date = new GregorianCalendar(2019, 2, 7).getTime();
-        RaceEvent event = new RaceEvent("Australian GP", new UUID(0,1), date, "Melbourne", true, UUID.randomUUID());
-        mCalendar.add(event);
-
-        date = new GregorianCalendar(2019, 3, 7).getTime();
-        event = new RaceEvent("Long Beach GP", new UUID(0,1), date, "USA", false, UUID.randomUUID());
-        mCalendar.add(event);
-
-        date = new GregorianCalendar(2019, 4, 7).getTime();
-        event = new RaceEvent("Monte Carlo GP", new UUID(0,1), date, "Monaco", false, UUID.randomUUID());
-        mCalendar.add(event);
-
+        mDatabase = new DatabaseHelper(context).getWritableDatabase();
         mSeries = UUID.randomUUID();
-        //end TODO temp
     }
 
     private String getTeamName(UUID id) {
@@ -337,6 +393,15 @@ public class DataModel {
         return teamName;
     }
 
+    /**
+     * Constructs a ContentValues for a new entry in the RaceResults table.
+     * @param raceId   The unique ID of the race the result is for
+     * @param driverId The ID of the driver the result is for
+     * @param start    The driver's start position in the race
+     * @param finish   The driver's finish position in the race
+     * @param points   The points the driver earned in the race.
+     * @return  A new ContentValues object that can be used to add an entry to the RaceResults table
+     */
     private ContentValues getResultContentValues(UUID raceId, UUID driverId, int start,
                                                  int finish, int points) {
 
