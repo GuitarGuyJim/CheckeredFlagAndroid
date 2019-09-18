@@ -1,5 +1,6 @@
 package com.redskysoftware.checkeredflag;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -23,8 +24,13 @@ public class RaceCalendarFragment extends Fragment {
 
     private static final String FINISH_POSITION_DIALOG = "DialogFinishPosition";
 
+    private static final int REQUEST_FINISH_POSITION = 0;
+
     private RecyclerView mCalendarRecyclerView;
     private RaceAdapter  mAdapter;
+
+    /** The race the user has selected */
+    private RaceEvent mSelectedRace;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,6 +52,34 @@ public class RaceCalendarFragment extends Fragment {
         updateUI();
 
         return view;
+    }
+
+    /**
+     *  Called when the FinishPositionDialog is sending a selected finishing position for the user
+     *  back to us.
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (resultCode != Activity.RESULT_OK) {
+            return;
+        }
+
+        if (requestCode == REQUEST_FINISH_POSITION) {
+
+            // get the selected finish position from the intent's extra data
+            int finishPosition = (int)data.getSerializableExtra(FinishPositionDialog.EXTRA_FINISH_POSITION);
+
+            RaceManager raceManager = new RaceManager(getContext());
+            raceManager.runRace(mSelectedRace, finishPosition);
+
+            // Display the race results in a RaceResultsActivity
+            Intent intent = RaceResultsActivity.newIntent(getActivity(), mSelectedRace.getEventId());
+            startActivity(intent);
+        }
     }
 
     private void updateUI() {
@@ -89,6 +123,9 @@ public class RaceCalendarFragment extends Fragment {
 
         @Override
         public void onClick(View view) {
+
+            mSelectedRace = mEvent;
+
             //
             // A race in the calendar was clicked.  If the race was completed, show the race
             // results, otherwise, show the dialog that lets the user run the race.
@@ -107,21 +144,15 @@ public class RaceCalendarFragment extends Fragment {
                 List<Driver> drivers = DataModel.get(getActivity()).getDriversInSeries("Formula A");
 
                 /*
-                 * Create a FinishPositionDialog, passing in the number of drivers in the series
+                 * Create a FinishPositionDialog, passing in the number of drivers in the series.
+                 * We'll also set the FinishPositionDialog's target fragment to be this fragment so
+                 * we can receive the selected position from the dialog.
                  */
                 FragmentManager manager = getFragmentManager();
                 FinishPositionDialog dialog = FinishPositionDialog.newInstance(drivers.size());
+
+                dialog.setTargetFragment(RaceCalendarFragment.this, REQUEST_FINISH_POSITION);
                 dialog.show(manager, FINISH_POSITION_DIALOG);
-
-                /*
-                //TODO move this code to where the finish position dialog sends its data back
-                RaceManager raceManager = new RaceManager(getContext());
-                raceManager.runRace(mEvent);
-
-                // Display the race results
-                Intent intent = RaceResultsActivity.newIntent(getActivity(), mEvent.getEventId());
-                startActivity(intent);
-                 */
             }
         }
     }
